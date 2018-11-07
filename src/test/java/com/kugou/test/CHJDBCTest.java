@@ -17,7 +17,7 @@ public class CHJDBCTest {
     @org.junit.Test
     public void insertTest() throws SQLException, JSONException {
 //        ClickhouseClient client = ClickhouseClientHolder.getClickhouseClient("10.12.0.22", 38123, "default", "default", "default@kugou");
-        ClickhouseClient client = ClickhouseClientHolder.getClickhouseClient("jdbc:clickhouse://localhost:38123/default","default","default");
+        ClickhouseClient client = ClickhouseClientHolder.getClickhouseClient("10.113.1.90", 8123, "default", "hadoop", "hadoop");
         StringBuilder query = new StringBuilder();
 //        query.append("Insert into test.t_lzj_test01 FORMAT TabSeparated").append("\n");
 //        query.append("2017-01-01").append("\t").append("JK").append("\t").append("\n");

@@ -104,6 +104,8 @@ public class ClickhouseHdfsLoader extends Configured implements Tool {
         if(StringUtils.isNotBlank(cliParameterParser.excludeFieldIndexs)){
             conf.set(ConfigurationKeys.CLI_P_EXCLUDE_FIELD_INDEXS, cliParameterParser.excludeFieldIndexs);
         }
+        log.info(" cliParameterParser.username========" + cliParameterParser.username);
+        log.info(" cliParameterParser.password========" + cliParameterParser.password);
         if(StringUtils.isNotBlank(cliParameterParser.username)){
             conf.set(ConfigurationKeys.CLI_P_CLICKHOUSE_USERNAME, cliParameterParser.username);
         }
@@ -119,7 +121,6 @@ public class ClickhouseHdfsLoader extends Configured implements Tool {
 
         // init clickhouse parameters
         initClickhouseParameters(conf, cliParameterParser);
-
         log.info("Clickhouse Loader: loading data to clickhouse with direct["+direct+"]");
 
         if(BooleanUtils.toBoolean(cliParameterParser.daily, "true", "false")){
@@ -201,6 +202,7 @@ public class ClickhouseHdfsLoader extends Configured implements Tool {
         Counter counter = job.getCounters().findCounter("Clickhouse Loader Counters","Failed records");
         if(null != counter && counter.getValue() > 0){
             log.error("Clickhouse Loader: ERROR! Failed records = "+counter.getValue());
+            log.error("Clickhouse Loader: ERROR! Failed records222 = "+counter.getDisplayName());
             ret = 1;
         }
 
@@ -244,7 +246,9 @@ public class ClickhouseHdfsLoader extends Configured implements Tool {
         log.info("CL_TARGET_TABLE_FULLNAME -> "+configuration.get(ConfigurationKeys.CL_TARGET_TABLE_FULLNAME));
 
         String targetCreateDDL = client.queryCreateTableScript(targetTableFullName);
+        log.info("targetCreateDDL ==============" + targetCreateDDL);
         Matcher m = CLICKHOUSE_DISTRIBUTED_ENGINE_CAUSE.matcher(targetCreateDDL);
+        log.info("m.find() ==============" + m.find());
         if (m.find()){
             // for Distributed table engine
             // CL_TARGET_CLUSTER_NAME                   -> cluster name
@@ -316,6 +320,7 @@ public class ClickhouseHdfsLoader extends Configured implements Tool {
             while(resultSet.next()){
                 index ++;
                 String line = resultSet.getString(1);
+                log.info("table desc =========" + line);
                 if (key.equalsIgnoreCase(line.trim())){
                     ret = index;
                     break;
@@ -350,6 +355,7 @@ public class ClickhouseHdfsLoader extends Configured implements Tool {
         String targetLocalTableCreateDDL = client.queryCreateTableScript(targetLocalTableFullName);
         String targetLocalDailyCreateDDL = targetLocalTableCreateDDL.replaceAll(targetLocalTable, localDailyTableName);
 
+        log.info("targetLocalDailyCreateDDL ========================" + targetLocalDailyCreateDDL);
         if(targetTableIsDistributed){
             // distributed daily table name
             String targetDistributedDailyTableName      = configuration.get(ConfigurationKeys.CLI_P_TABLE) + dailyTableSuffix;

@@ -74,6 +74,7 @@ public abstract class AbstractClickhouseLoaderMapper<KEYIN, VALUEIN, KEYOUT, VAL
         log.info("Clickhouse Loader : batchSize = "+this.batchSize+", maxTries = "+this.maxTries);
         try {
             // 初始化环境
+            log.info("initTempEnv 初始化环境........ ");
             initTempEnv(context, config);
 
         } catch (ClassNotFoundException e) {
@@ -483,15 +484,19 @@ public abstract class AbstractClickhouseLoaderMapper<KEYIN, VALUEIN, KEYOUT, VAL
         ResultSet ret1 = client.executeQuery("select count(*) as total_col_size from system.columns where database = '"+this.config.getDatabase()+"' and table = '"+this.config.getTableName()+"'");
         while (ret1.next()){
             targetTableColumnSize = ret1.getInt("total_col_size");
+            log.info("targetTableColumnSize  size " + targetTableColumnSize);
         }
         ret1.close();
         log.info("Clickhouse Loader : Found target table["+this.config.getDatabase()+"."+this.config.getTableName()+"] column size = "+targetTableColumnSize);
         this.config.getConf().setInt(ConfigurationKeys.CL_TARGET_TABLE_COLUMN_SIZE, targetTableColumnSize);
 
+        log.info("distributedLocalDatabase ================" + distributedLocalDatabase + ", distributedLocalTable===== " + distributedLocalTable);
+
         // lookup replicated table?
         ResultSet ret2 = client.executeQuery("select engine from system.tables where database = '"+distributedLocalDatabase+"' and name = '"+distributedLocalTable+"'");
         while (ret2.next()){
             String engine = ret2.getString(1);
+            log.info("engine================" + engine);
             if (engine.startsWith("Replicated")){
                 this.distLookupReplicatedTable = true;
                 break;
