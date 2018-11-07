@@ -542,7 +542,8 @@ public abstract class AbstractClickhouseLoaderMapper<KEYIN, VALUEIN, KEYOUT, VAL
             // Not for insert into temp distributed table
             this.sqlHeader = "INSERT INTO temp."+ this.tempTable +" FORMAT "+configuration.getClickhouseFormat();
         }else{
-            this.sqlHeader = "INSERT INTO "+distributedLocalDatabase+"."+distributedLocalTable+" FORMAT "+configuration.getClickhouseFormat();
+//       this.sqlHeader = "INSERT INTO "+distributedLocalDatabase+"."+distributedLocalTable+" FORMAT "+configuration.getClickhouseFormat();
+            this.sqlHeader = "INSERT INTO "+this.config.getDatabase()+"."+this.config.getTableName()+" FORMAT "+configuration.getClickhouseFormat();
         }
 
         log.info("Clickhouse JDBC : INSERT USING header["+sqlHeader+"]");
