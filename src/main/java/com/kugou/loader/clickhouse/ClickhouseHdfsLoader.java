@@ -46,6 +46,7 @@ import java.util.regex.Pattern;
 public class ClickhouseHdfsLoader extends Configured implements Tool {
 
     private static final    Log log = LogFactory.getLog(ClickhouseHdfsLoader.class);
+
     private static final    Pattern CLICKHOUSE_DISTRIBUTED_ENGINE_CAUSE = Pattern.compile("= *Distributed *\\( *'?([A-Za-z0-9_\\-]+)'? *, *'?([A-Za-z0-9_\\-]+)'? *, *'?([A-Za-z0-9_\\-]+)'? *(, *[a-zA-Z0-9_\\-]+\\(([A-Za-z0-9_\\-]+|)\\))? *\\)$");
     private static final    Pattern urlRegexp = Pattern.compile("^jdbc:clickhouse://([\\d\\.\\-_\\w]+):(\\d+)/([\\d\\w\\-_]+)(\\?.+)?$");
 
@@ -61,7 +62,10 @@ public class ClickhouseHdfsLoader extends Configured implements Tool {
     private List<ClusterNodes>    clickhouseClusterHosts = Lists.newArrayList();
 
     public static void main(String[] args) throws Exception{
+        long startTime = System.currentTimeMillis();
         int res = ToolRunner.run(new Configuration(), new ClickhouseHdfsLoader(), args);
+        long endTime = System.currentTimeMillis();
+        log.info("程序运行总时间：" + (endTime - startTime)/1000 + "s");
         System.exit(res);
     }
 
@@ -202,8 +206,11 @@ public class ClickhouseHdfsLoader extends Configured implements Tool {
         Counter counter = job.getCounters().findCounter("Clickhouse Loader Counters","Failed records");
         if(null != counter && counter.getValue() > 0){
             log.error("Clickhouse Loader: ERROR! Failed records = "+counter.getValue());
-            log.error("Clickhouse Loader: ERROR! Failed records222 = "+counter.getDisplayName());
+            log.error("Clickhouse Loader: ERROR! getDisplayName= "+counter.getDisplayName());
             ret = 1;
+        }else{
+            log.info("Task complete...  " +counter.getDisplayName());
+            log.info("getDisplayName:  " +counter.getDisplayName() + ", getValue:  " +counter.getValue());
         }
 
         if (!BooleanUtils.toBoolean(cliParameterParser.direct, "true", "false")){

@@ -68,13 +68,14 @@ public abstract class AbstractClickhouseLoaderMapper<KEYIN, VALUEIN, KEYOUT, VAL
     protected void setup(Context context) throws IOException, InterruptedException {
 
         log.info("Clickhouse JDBC : Mapper Setup.");
+        System.out.println("Clickhouse JDBC : Mapper Setup.");
         config = new ClickhouseConfiguration(context.getConfiguration());
         this.maxTries = config.getMaxTries();
         this.batchSize = config.getBatchSize();
         log.info("Clickhouse Loader : batchSize = "+this.batchSize+", maxTries = "+this.maxTries);
         try {
             // 初始化环境
-            log.info("initTempEnv 初始化环境........ ");
+            log.info("initTempEnv enviroment........ ");
             initTempEnv(context, config);
 
         } catch (ClassNotFoundException e) {
@@ -325,6 +326,9 @@ public abstract class AbstractClickhouseLoaderMapper<KEYIN, VALUEIN, KEYOUT, VAL
                     try {
                         long l = System.currentTimeMillis();
                         ClickhouseClient client = ClickhouseClientHolder.getClickhouseClient(h, port, distributedLocalDatabase, config.get(ConfigurationKeys.CLI_P_CLICKHOUSE_USERNAME), config.get(ConfigurationKeys.CLI_P_CLICKHOUSE_PASSWORD));
+                        log.info("cache.records.length: " + cache.records.length());
+                        log.info("get cache.records by 1000 : " + cache.records.toString().substring(1000));
+                        log.info("batch insert end : ");
                         client.insert(cache.records.toString());
                         hostStatus.put(h, true);
                         log.info("Clickhouse Loader : loaded data to host -> " + h +", take time "+(System.currentTimeMillis() - l)+"ms.");
@@ -337,6 +341,7 @@ public abstract class AbstractClickhouseLoaderMapper<KEYIN, VALUEIN, KEYOUT, VAL
                         try {
                             Thread.sleep((tries+1)*10000l);
                         } catch (InterruptedException e1) {
+                            e1.printStackTrace();
                         }
                     }
                 }

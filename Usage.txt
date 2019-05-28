@@ -1,0 +1,20 @@
+1.除了支持2.7也支持.2.6
+2. clickhouse-jdbc(0.1-SNAPSHOT)的包需要自己手动去打
+3.dt 时间可以随意填写
+4.密码必须设置，而且不能使用默认default用户
+5.尽量使用orc格式，数据按照tab格式进行分割的
+6.必填项date类型的必须要求格式准确，其他的格式不做强制要求，可以多写个冗余字段, generate_date
+7.batch-size 按照byte来算
+8.单个表也支持查询
+9.
+
+7. hadoop jar clickhouse-hdfs-loader-2.0.3-jar-with-dependencies.jar com.kugou.loader.clickhouse.ClickhouseHdfsLoader \
+-Dmapreduce.job.queuename=root.default \
+-i orc \
+--connect jdbc:clickhouse://172.20.17.40:8123/lmmtmp \
+--table lmmtmp.mkt_sms_log_test_cls \
+--dt 2009-09-23 \
+--username hadoop \
+--password hadoop \
+--export-dir /user/hive/warehouse/lmmtmp.db/mkt_sms_log_orc \
+--batch-size 1966080 \

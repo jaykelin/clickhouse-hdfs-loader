@@ -1,0 +1,71 @@
+--hive
+drop table if exists test.mkt_sms_log_orc;
+create table test.mkt_sms_log_orc stored as orc as 
+select 
+id             , 
+source_type    , 
+source_id      , 
+target         , 
+batch_no       , 
+content        , 
+send_time      , 
+result_type    , 
+failure_reason , 
+user_id        , 
+create_time    , 
+update_time    , 
+create_by      , 
+update_by   ,
+case when length(create_time) =19 then to_date(create_time)
+else '1970-01-01'
+end as create_date
+from  test.mkt_sms_log;
+
+
+--ch
+CREATE TABLE test.mkt_sms_log_test ( 
+id                      Int64        ,
+source_type             Nullable(Int8)        ,
+source_id                Nullable(String)   ,
+target                   Nullable(String)   ,
+batch_no                Nullable(Int8)        ,
+content                  Nullable(String) ,
+send_time                Nullable(String)     ,
+result_type             Nullable(Int8)        ,
+failure_reason           Nullable(String)  ,
+user_id                  Nullable(String)   ,
+create_time              Nullable(String)     ,
+update_time              Nullable(String)     ,
+create_by                Nullable(String)   ,
+update_by                Nullable(String)   ,
+create_date Date
+)ENGINE = MergeTree(create_date, id, 8192);  
+
+
+CREATE TABLE test.mkt_sms_log_test_cls ( 
+id                      Int64        ,
+source_type             Nullable(Int8)        ,
+source_id                Nullable(String)   ,
+target                   Nullable(String)   ,
+batch_no                Nullable(Int8)        ,
+content                  Nullable(String) ,
+send_time                Nullable(String)     ,
+result_type             Nullable(Int8)        ,
+failure_reason           Nullable(String)  ,
+user_id                  Nullable(String)   ,
+create_time              Nullable(String)     ,
+update_time              Nullable(String)     ,
+create_by                Nullable(String)   ,
+update_by                Nullable(String)   ,
+create_date Date
+)
+ENGINE=Distributed(crm_4shards_1replicas, test, mkt_sms_log_test, rand());
+
+
+-- online   1.9亿条数据, 140s能导入完成
+
+hadoop jar clickhouse-hdfs-loader-2.0.3-jar-with-dependencies.jar com.kugou.loader.clickhouse.ClickhouseHdfsLoader \
+-Dmapreduce.job.queuename=root.default -i orc --connect jdbc:clickhouse://xx.xx.xx.xx:8123/test \
+--table test.mkt_sms_log_test_cls --dt 2009-09-23 \
+--username hadoop --password hadoop --export-dir /user/hive/warehouse/test.db/mkt_sms_log_orc \
+--batch-size 1966080

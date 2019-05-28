@@ -53,7 +53,6 @@ public class Test {
 
         HashFunction fn = Hashing.murmur3_128();
 
-
 //        for(int j = 0; j< 100; j++){
 //            long l = (long)((Math.random()*9+1)*100);
 ////            System.out.println(l+":"+fn.hashLong(l).asInt());
@@ -75,17 +74,20 @@ public class Test {
     }
 
     @org.junit.Test
+//    测试从hive抽取数据，写入CH中
     public void extractHivePartition(){
 //        Configuration conf = new Configuration();
-//        conf.set(ConfigurationKeys.CLI_P_EXPORT_DIR, "/user/hive/warehouse/dsl.db/dwf_list_play_d/dt=2016-10-01/pt=ios");
+////        conf.set(ConfigurationKeys.CLI_P_EXPORT_DIR, "/user/hive/warehouse/dsl.db/dwf_list_play_d/dt=2016-10-01/pt=ios");
+//        conf.set(ConfigurationKeys.CLI_P_EXPORT_DIR, "/user/hive/warehouse/lmmtmp.db/test_user_orc");
 //        final ClickhouseConfiguration configuration = new ClickhouseConfiguration(conf);
+//
 //        AbstractClickhouseLoaderMapper mapper = new AbstractClickhouseLoaderMapper() {
-//            @Override
+////            @Override
 //            public RowRecordDecoder getRowRecordDecoder(Context context) {
 //                return null;
 //            }
 //
-//            @Override
+////            @Override
 //            public String readLine(Object key, Object value, Context context) {
 //                Map<String, String> hivePartitions = this.extractHivePartitions(configuration);
 //                for (String k : hivePartitions.keySet()){
@@ -94,16 +96,16 @@ public class Test {
 //                return null;
 //            }
 //
-//            @Override
+////            @Override
 //            public void write(String host, String hostIndex, String tempTable, String tempDatabase, Context context) throws IOException, InterruptedException {
 //
 //            }
 //        };
 //
 //        mapper.readLine(null , null, null);
-
-        Pattern CLICKHOUSE_CONNECT_PATTERN = Pattern.compile("^jdbc:clickhouse://([\\d\\.\\-_\\w]+):(\\d+)/([\\d\\w\\-_]+)(\\?.+)?$");
-        System.out.println(CLICKHOUSE_CONNECT_PATTERN.matcher("jdbc:clickhouse://localhost:8123/dal_crosspt_dist?xx=1&xx=2").matches());
+//
+//        Pattern CLICKHOUSE_CONNECT_PATTERN = Pattern.compile("^jdbc:clickhouse://([\\d\\.\\-_\\w]+):(\\d+)/([\\d\\w\\-_]+)(\\?.+)?$");
+//        System.out.println(CLICKHOUSE_CONNECT_PATTERN.matcher("jdbc:clickhouse://localhost:8123/dal_crosspt_dist?xx=1&xx=2").matches());
     }
 
     @org.junit.Test

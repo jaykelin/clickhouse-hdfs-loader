@@ -26,6 +26,7 @@ public class OrcLoaderMapper extends AbstractClickhouseLoaderMapper<NullWritable
 
     @Override
     public RowRecordDecoder<NullWritable, OrcStruct> getRowRecordDecoder(Configuration config) {
+        logger.info("OrcLoaderMapper.RowRecordDecoder!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
         return new DefaultRowRecordDecoder<>(config, new OrcRecordDecoder(new ClickhouseConfiguration(config)));
     }
 
@@ -69,6 +70,7 @@ public class OrcLoaderMapper extends AbstractClickhouseLoaderMapper<NullWritable
 
     @Override
     public void write(ClusterNodes nodes, String mapTaskIdentify, String tempTable, String tempDatabase, Context context) throws IOException, InterruptedException {
+        logger.info("OrcLoaderMapper.write!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
         for(String host: nodes.getNodeDataStatus().keySet()){
             if (nodes.getNodeDataStatus().get(host)){
                 if(!tempTable.contains(".")){

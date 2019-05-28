@@ -24,9 +24,13 @@ public class TextRecordDecoderTest {
         String nullString = "", nullNonString="";
 
         DefaultRowRecordDecoder rowRecordDecoder = new DefaultRowRecordDecoder<>(conf, recordDecoder);
-        rowRecordDecoder.setRowRecord(null, new Text("2017-04-16|pc|弹幕|7575|8417|0|0|0|0|0|0|\\N"));
+
+        rowRecordDecoder.setRowRecord(null, new Text("2017-04-16|pc|弹幕|7575|8417|0|0|85|0|75|0|\\N"));
         while(rowRecordDecoder.hasNext()){
             Tuple.Tuple2 tuple2 = rowRecordDecoder.nextTuple();
+
+            System.out.println("tuple2._1===" + tuple2._1()+", tuple2._2==" + tuple2._2()  );
+
             String field;
             if (null == tuple2._2()){
                 field = nullString;

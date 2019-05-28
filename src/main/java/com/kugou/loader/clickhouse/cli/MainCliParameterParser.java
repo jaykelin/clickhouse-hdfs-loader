@@ -41,7 +41,7 @@ public class MainCliParameterParser {
     @Option(name="--dt",required = true, usage = "导入数据的业务时间,format:YYYY-MM-DD")
     public String dt;
 
-    @Option(name="--batch-size", required = false, usage = "batch size load data into clickhouse")
+    @Option(name="--batch-size", required = false, usage = "batch size load data into clickhouse(byte)")
     public int batchSize = 196608;
 
     @Option(name="--max-tries", required = false, usage = "当在导入发生异常时的重试次数")
