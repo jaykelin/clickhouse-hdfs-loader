@@ -61,11 +61,4 @@ public class ClickhouseClientHolder {
         }
         return clientHolders.get(key);
     }
-
-    public static void main(String[] args){
-        String jdbc = "jdbc:clickhouse://10.1.0.210:8123/bi_search_local";
-        Matcher m = CLICKHOUSE_CONNECT_PATTERN.matcher(jdbc);
-        System.out.println(m.matches());
-        System.out.println(m.group(1)+"---"+m.group(2)+"---"+m.group(3));
-    }
 }
