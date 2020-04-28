@@ -40,6 +40,22 @@ submit Mapreduce job to hadoop,loading hdfs data to clickhouse，Support text or
 经过测试，在hadoop 2.7.1， 使用下面的jdbc客户端可以避免http包冲突问题  
 https://github.com/jaykelin/clickhouse-jdbc/tree/0.1-SNAPSHOT
 
+### step-by-step guide for jar building 
+```bash
+git clone https://github.com/jaykelin/clickhouse-jdbc.git
+git clone https://github.com/jaykelin/clickhouse-hdfs-loader.git
+cd clickhouse-jdbs
+git checkout 0.1-SNAPSHOT
+mvn install -DskipTests 
+
+cd ../clickhouse-hdfs-loader
+mvn clean package assembly:assembly -DskipTests
+
+cd target
+hadoop jar target/clickhouse-hdfs-loader-2.1.2-jar-with-dependencies.jar com.kugou.loader.clickhouse.ClickhouseHdfsLoader ...
+```
+
+
 ## Usage
 ```bash
 hadoop jar clickhouse-hdfs-loader.jar com.kugou.loader.clickhouse.ClickhouseHdfsLoader \
