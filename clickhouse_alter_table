@@ -1,0 +1,215 @@
+#!/bin/bash
+# usage : clickhouse_alter_table distributed_db.table drop partition 202001 username password
+# dependency jq https://stedolan.github.io/jq/
+
+CLICKHOUSE_URL="http://clickhouse.server:8123/?user=readonly&password=****"
+USERNAME="readonly"
+PASSWORD="****"
+FORMAT="JSONEachRow"
+MAX_RETRY=3
+
+
+declare -A clusters
+
+function get_json_value(){
+    local val=`echo $1 | $proc_dir/jq -r ".$2"`
+    echo $val
+}
+
+function print_usage(){
+    if [ $parameter_count -ne 6 ] || [ -n "$1" ]; then
+        echo "Usag : clickhouse_alter_table distributed_db.table drop partition 202001 username password"
+        exit 1
+    fi
+    ss=`echo $full_action | tr 'A-Z' 'a-z'`
+    if [ "$ss" != "drop partition" ]; then
+        echo `date '+%Y-%m-%d %H:%M:%S'`" [ERROR] Not support ${full_action}"
+        exit 1
+    fi
+}
+
+# check table engine is Distributed
+function check_table() {
+    local arr=(${full_tablename//./ })
+    length=(${#arr[@]})
+    if [ $length -ne 2 ]; then
+        echo `date '+%Y-%m-%d %H:%M:%S'`" [ERROR] Illegal parameter : ${full_tablename}"
+        print_usage true
+        exit 1
+    fi 
+    db=(${arr[0]})
+    table=(${arr[1]})
+
+    local SQL="select engine, engine_full from system.tables where database='${db}' and name = '${table}' FORMAT ${FORMAT}"
+    check_table_result=`echo ${SQL} | curl -s ${CLICKHOUSE_URL} --data-binary @-`
+    if [ -z "$check_table_result" ]; then
+        echo `date '+%Y-%m-%d %H:%M:%S'`" [ERROR] Table ${full_tablename} not exists."
+        print_usage true
+        exit 1
+    fi
+    engine=`get_json_value "$check_table_result" engine`
+    if [ -z $engine ]; then
+        echo `date '+%Y-%m-%d %H:%M:%S'`" [ERROR] ${check_table_result}"
+        print_usage true
+        exit 1
+    elif [ $engine != "Distributed" ]; then
+        echo `date '+%Y-%m-%d %H:%M:%S'`" [ERROR] $full_tablename ENGINE is ${engine}, Must be Distributed."
+        print_usage true
+        exit 1
+    fi
+    local engine_full=`get_json_value "$check_table_result" engine_full`
+    local engine_full_str=`echo ${engine_full//\'/}`
+    #echo ${engine_full_str}
+
+    local arr2=(${engine_full_str//,/ })
+    local p1=(${arr2[0]})
+    local arr3=(${p1//\(/ })
+    cluster=(${arr3[1]})
+    local_db=(${arr2[1]})
+    local_table=(${arr2[2]})
+
+    if [ -z $cluster ] || [ -z $local_db ] || [ -z $local_table ]; then
+        echo `date '+%Y-%m-%d %H:%M:%S'`" [ERROR] Cannot found LOCAL table for ${full_tablename} . ENGINE = ${engine_full} ."
+        print_usage true
+        exit 1
+    fi
+    echo `date '+%Y-%m-%d %H:%M:%S'`" [INFO] $full_tablename : cluster=$cluster , local_db = $local_db , local_table = $local_table"
+    get_local_table_engine
+}
+
+function get_local_table_engine(){
+    local SQL="select engine, engine_full from system.tables where database='${local_db}' and name = '${local_table}' FORMAT ${FORMAT}"
+    local local_table_result=`echo ${SQL} | curl -s ${CLICKHOUSE_URL} --data-binary @-`
+    if [ -z "$local_table_result" ]; then
+        echo `date '+%Y-%m-%d %H:%M:%S'`" [ERROR] Table ${local_db}.${local_table} not exists."
+        print_usage true
+        exit 1
+    fi
+    local r_local_table_engine=`get_json_value "$local_table_result" engine`
+    case $r_local_table_engine in
+        *MergeTree*) 
+            local_table_engine=$r_local_table_engine 
+            ;;
+        *) 
+            echo `date '+%Y-%m-%d %H:%M:%S'`" [ERROR] Not support Table ENGINE for ${local_db}.${local_table}. ENGINE = $r_local_table_engine "
+            exit 1
+            ;;
+    esac
+}
+
+# get cluster info
+function get_cluster_info(){
+    local SQL="select shard_num, replica_num, host_address from system.clusters where cluster = '$cluster' format JSONEachRow"
+    local cluster_result=`echo ${SQL} | curl -s ${CLICKHOUSE_URL} --data-binary @-`
+    local arr=(${cluster_result// / })
+    for (( i=0;i<${#arr[@]};i++)); do
+        local r=${arr[i]}
+        local shard=`get_json_value "$r" shard_num`
+        local host=`get_json_value "$r" host_address`
+        local replica=`get_json_value "$r" replica_num`
+        if [ -n "${clusters[${shard}]}" ]; then
+            clusters[${shard}]=`echo "${clusters[${shard}]},${host}"`
+        else
+            clusters[${shard}]="$host"
+        fi
+    done
+}
+
+function remote_exec(){
+    local sql=$1
+    local hosts=$2
+    local retry_num=$3
+    if [ $retry_num -gt $MAX_RETRY ]; then
+        echo `date '+%Y-%m-%d %H:%M:%S'`" [ERROR] $hosts All alterts failed."
+        return 1
+    fi
+    local successed_hosts=0
+    local hosts_arr=(${hosts//,/ })
+    for (( i=0;i<${#hosts_arr[@]};i++ )) do
+        local host="${hosts_arr[i]}"
+        local clickhouse_altert_url=`echo "http://${host}:8123/?user=${username}&password=${password}"`
+        #echo `date '+%Y-%m-%d %H:%M:%S'`" [DEBUG] curl -m 60 --connect-timeout 10 -s -w \"HTTPSTATUS:%{http_code}\" \"${clickhouse_altert_url}\" -d \"${sql}\""
+        local http_response=$(curl -m 60 --connect-timeout 10 -s -w "HTTPSTATUS:%{http_code}" "${clickhouse_altert_url}" -d "${sql}")
+        local http_response_code=$(echo $http_response | tr -d '\n' | sed -e 's/.*HTTPSTATUS://')
+        local http_response_body=$(echo $http_response | sed -e 's/HTTPSTATUS\:.*//g')
+        if [ "$http_response_code" == "200" ];then 
+            successed_hosts=$((successed_hosts+1))
+            echo `date '+%Y-%m-%d %H:%M:%S'`" [INFO] Replica host $host altert execute success. "
+            if [[ "$local_table_engine" == "Replicated"* ]]; then
+                return 0
+            else 
+                if [[ "$successed_hosts" == "${#hosts_arr[@]}" ]]; then 
+                    return 0
+                fi
+            fi
+        else 
+            echo `date '+%Y-%m-%d %H:%M:%S'`" [ERROR] $host altert failed. sleep 10s and try again."
+            echo `date '+%Y-%m-%d %H:%M:%S'`" [ERROR] http_reponse_code = ${http_response_code}"
+            echo `date '+%Y-%m-%d %H:%M:%S'`" [ERROR] ${http_response_body}"
+            sleep 10s
+        fi
+    done
+    return 1
+}
+
+function eval_alter(){
+    if [ "$partition" -gt 0 ] 2>/dev/null ; then
+        local SQL="ALTER TABLE ${local_db}.${local_table} ${full_action} ${partition}"
+    else
+        local SQL="ALTER TABLE ${local_db}.${local_table} ${full_action} '${partition}'"
+    fi
+    local failed=0
+    #echo `date '+%Y-%m-%d %H:%M:%S'`" [INFO] cluster hosts : ${clusters[@]}"
+    for key in ${!clusters[@]}; do
+        local hosts_str="${clusters[$key]}"
+        echo `date '+%Y-%m-%d %H:%M:%S'`" [INFO] alter execute on shard_${key} hosts_str=${hosts_str}"
+        for j in {1..3}; do
+            remote_exec "$SQL" "$hosts_str" $j
+            if [ $? -eq 0 ]; then
+                #echo `date '+%Y-%m-%d %H:%M:%S'`" [INFO] action alter execute success."
+                break
+            else
+                if [ $j -eq 3 ]; then
+                    echo `date '+%Y-%m-%d %H:%M:%S'`" [ERROR] All alters shard_${key} hosts_str=${hosts_str} execute failed."
+                    failed=1
+                else 
+                    echo `date '+%Y-%m-%d %H:%M:%S'`" [WARN] alter execute failed. sleep 60s and try again."
+                    sleep 60s
+                fi
+            fi
+        done
+    done
+    if [ $failed -eq 0 ]; then
+        echo `date '+%Y-%m-%d %H:%M:%S'`" [INFO] ${full_tablename} ${full_action} ${partition} FINAL success."
+        exit 0
+    else
+        echo `date '+%Y-%m-%d %H:%M:%S'`" [INFO] ${full_tablename} ${full_action} ${partition} FINAL failed."
+        exit 1
+    fi
+}
+
+function urlencode() {
+    local length="${#1}"
+    for (( i = 0; i < length; i++ )); do
+        local c="${1:i:1}"
+        case $c in
+            [a-zA-Z0-9.~_-]) printf "$c" ;;
+            *) printf "$c" | xxd -p -c1 | while read x;do printf "%%%s" "$x";done
+        esac
+    done
+}
+
+# main
+full_tablename=$1
+action=$2
+full_action=`echo $2 $3`
+partition=$4
+username=`urlencode $5`
+password=`urlencode $6`
+parameter_count=$#
+proc_dir=$(cd `dirname $0`; pwd)
+
+print_usage
+check_table
+get_cluster_info
+eval_alter
